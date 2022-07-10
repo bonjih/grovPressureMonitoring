@@ -1,11 +1,4 @@
-import itertools
-import re
 from datetime import datetime
-from sympy import Lambda, symbols
-from functools import reduce
-from math import gcd
-import numpy as np
-from sympy import *
 
 
 def diff_calc(a, b):

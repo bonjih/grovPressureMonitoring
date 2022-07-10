@@ -1,4 +1,3 @@
-import VariableClass
 import calc_methods
 import config_parser
 import db_manager
@@ -65,4 +64,4 @@ if __name__ == "__main__":
     get_pulse_location(df)
     event_location, shield_diff = pressure_event_location.main(pt1, pt2, pt3, pt4)
     db_fields = config_parser.db_json_parser()
-    #db_manager_controller(db_fields, shield_diff, event_location)
+    db_manager_controller(db_fields, shield_diff, event_location)

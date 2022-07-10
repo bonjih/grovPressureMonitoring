@@ -1,5 +1,3 @@
-from sympy import Lambda, symbols
-
 import global_conf_variables
 from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, convert_time, get_minimum, invalid_op, cal_equ
 from testing import test_known_output1, test_known_output2
