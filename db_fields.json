@@ -1,0 +1,14 @@
+{
+	"event_id": "",
+	"event_location": "",
+	"shield_location": "",
+	"fst_pulse_time": "",
+	"sec_pulse_time": "",
+	"trd_pulse_time": "",
+	"fth_pulse_time": "",
+	"fst_pulse_shield_loc": "",
+	"sec_pulse_shield_loc": "",
+	"trd_pulse_shield_loc": "",
+	"fth_pulse_shield_loc": "",
+	"date_time_pulse": ""
+}
