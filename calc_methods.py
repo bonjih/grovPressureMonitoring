@@ -33,5 +33,9 @@ def cal_equ(total_vel, vel_vent_mg, vel_vent_tg, const):
     return b / a
 
 
+def make_eventID(fst_pulse):
+    return fst_pulse[2:4] + fst_pulse[5:7] + fst_pulse[5:7]
+
+
 def invalid_op(x):
     raise Exception("Invalid operation")
