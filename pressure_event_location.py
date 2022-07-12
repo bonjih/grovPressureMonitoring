@@ -1,6 +1,6 @@
+import db_manager
 import global_conf_variables
-from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, convert_time, get_minimum, invalid_op, cal_equ
-from testing import test_known_output1, test_known_output2
+from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, get_minimum, invalid_op, cal_equ, convert_time
 
 values = global_conf_variables.get_values()
 
@@ -10,7 +10,8 @@ dist_pt2_to_pt3 = values[1]
 dist_pt3_to_pt4 = values[2]
 LW_face_area = values[3]
 shield_width = values[4]
-vent_velocity = values[5]
+
+vent_velocity = db_manager.pi_query_vent()
 
 # TODO unsure if require in final, derive from data PI?
 sensor_loc_1 = values[10]
@@ -38,13 +39,15 @@ PW_to_MG = vent_velocity
 
 
 def fist_pulse(pt1, pt2, pt3, pt4):
-    pt_1, pt_2, pt_3, pt_4 = test_known_output1()
-    # pt_1 = convert_time(pt1[0])
-    # pt_2 = convert_time(pt2[0])
-    # pt_3 = convert_time(pt3[0])
-    # pt_4 = convert_time(pt4[0])
-    fst_pulse = get_minimum(pt_1, pt_2, pt_3, pt_4)
-    return fst_pulse, pt_1, pt_2, pt_3, pt_4
+    if pt1:
+        pt_1 = convert_time(pt1[0])
+        pt_2 = convert_time(pt2[0])
+        pt_3 = convert_time(pt3[0])
+        pt_4 = convert_time(pt4[0])
+        fst_pulse = get_minimum(pt_1, pt_2, pt_3, pt_4)
+        return fst_pulse, pt_1, pt_2, pt_3, pt_4
+    else:
+        pass
 
 
 def second_pulse(fst_pulse, pt_1, pt_2, pt_3, pt_4):
@@ -135,17 +138,15 @@ def compute_location(fst_1, sec_2, thrd_3, frth_4):
     return round(event_location), round(shield_diff, 2)
 
 
-def compute_location2(fst_1, sec_2, thrd_3, frth_4):
+def compute_location_case2(fst_1, sec_2, thrd_3, frth_4):
     # distance between pulse locations
     dist_from_mg = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
     dist_from_tg = sum_calc(dist_pt3_to_pt4, dist_pt2_to_pt3)
-    a = diff_calc(thrd_3, sec_2)
-    b = dist_from_tg/a
-    print(dist_from_tg/a)
+
     # velocity of each pressure wave
-    vel_from_mg = div_calc(dist_from_mg, diff_calc(frth_4, fst_1))
-    vel_from_tg = div_calc(dist_from_tg, diff_calc(thrd_3, sec_2))
-    print(vel_from_mg, vel_from_tg, 'dd')
+    vel_from_mg = div_calc(dist_from_mg, diff_calc(frth_4, sec_2))
+    vel_from_tg = div_calc(dist_from_tg, diff_calc(thrd_3, fst_1))
+
     # velocities of veneration
     vel_vent_mg = sum_calc(vel_from_mg, PW_to_MG)
     vel_vent_tg = diff_calc(vel_from_tg, PW_to_TG)
@@ -167,10 +168,13 @@ def compute_location2(fst_1, sec_2, thrd_3, frth_4):
 
 
 def main(pt1, pt2, pt3, pt4):
-    fst_pulse, pt_1, pt_2, pt_3, pt_4 = fist_pulse(pt1, pt2, pt3, pt4)
-    sec_pulse = second_pulse(fst_pulse, pt_1, pt_2, pt_3, pt_4)
-    thrd_pulse = third_pulse(fst_pulse, sec_pulse, pt_1, pt_2, pt_3, pt_4)
-    frth_pulse = fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4)
-    location = compute_location2(fst_pulse, sec_pulse, thrd_pulse, frth_pulse)
-    print(location)
-    return location
+    try:
+        fst_pulse, pt_1, pt_2, pt_3, pt_4 = fist_pulse(pt1, pt2, pt3, pt4)
+        sec_pulse = second_pulse(fst_pulse, pt_1, pt_2, pt_3, pt_4)
+        thrd_pulse = third_pulse(fst_pulse, sec_pulse, pt_1, pt_2, pt_3, pt_4)
+        frth_pulse = fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4)
+        location = compute_location_case2(fst_pulse, sec_pulse, thrd_pulse, frth_pulse)
+        print(location)
+        return location
+    except Exception as e:
+        pass
