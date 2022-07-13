@@ -1,6 +1,9 @@
 import db_manager
 import global_conf_variables
 from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, get_minimum, invalid_op, cal_equ, convert_time
+import warnings
+
+warnings.filterwarnings("ignore")
 
 values = global_conf_variables.get_values()
 
@@ -13,7 +16,6 @@ shield_width = values[4]
 
 vent_velocity = db_manager.pi_query_vent()
 
-# TODO unsure if require in final, derive from data PI?
 sensor_loc_1 = values[10]
 sensor_loc_2 = values[11]
 sensor_loc_3 = values[12]
@@ -21,21 +23,66 @@ sensor_loc_4 = values[13]
 
 LW_face_area = LW_face_area  # m^2
 
-# shield locations
-RS002 = sensor_loc_1
-RS050 = sensor_loc_2
-RS100 = sensor_loc_3  # shield 100
-RS148 = sensor_loc_4
-
 shield_width = shield_width  # meters
 # TG104_5to6_BHDG_Vel_Sensor = 84  # m^/3s
 
-# ventilation velocity assumption from event analyse 211204, 14/7/21
-PW_to_TG = vent_velocity
-PW_to_MG = vent_velocity
+# ventilation velocity from PI data, assumed same both directions
+PW_to_TG = 6
+PW_to_MG = 6
+
+shield_no_fst_pulse = []
+shield_no_sec_pulse = []
+shield_no_thrd_pulse = []
+shield_no_frth_pulse = []
 
 
-# TODO need a process to find/output the first pulse shield location, from PI data
+def get_shield_no1(pt1, pt2, pt3, pt4, pulse):
+    if pulse == pt1:
+        shield_no_fst_pulse.append(sensor_loc_1)
+    elif pulse == pt2:
+        shield_no_fst_pulse.append(sensor_loc_2)
+    elif pulse == pt3:
+        shield_no_fst_pulse.append(sensor_loc_3)
+    elif pulse == pt4:
+        shield_no_fst_pulse.append(sensor_loc_4)
+
+    return shield_no_fst_pulse
+
+
+def get_shield_no2(pt1, pt2, pt3, pt4, pulse):
+    if pulse == pt1:
+        shield_no_sec_pulse.append(sensor_loc_1)
+    elif pulse == pt2:
+        shield_no_sec_pulse.append(sensor_loc_2)
+    elif pulse == pt3:
+        shield_no_sec_pulse.append(sensor_loc_3)
+    elif pulse == pt4:
+        shield_no_sec_pulse.append(sensor_loc_4)
+    return shield_no_sec_pulse
+
+
+def get_shield_no3(pt1, pt2, pt3, pt4, pulse):
+    if pulse == pt1:
+        shield_no_thrd_pulse.append(sensor_loc_1)
+    elif pulse == pt2:
+        shield_no_thrd_pulse.append(sensor_loc_2)
+    elif pulse == pt3:
+        shield_no_thrd_pulse.append(sensor_loc_3)
+    elif pulse == pt4:
+        shield_no_thrd_pulse.append(sensor_loc_4)
+    return shield_no_thrd_pulse
+
+
+def get_shield_no4(pt1, pt2, pt3, pt4, pulse):
+    if pulse == pt1:
+        shield_no_frth_pulse.append(sensor_loc_1)
+    elif pulse == pt2:
+        shield_no_frth_pulse.append(sensor_loc_2)
+    elif pulse == pt3:
+        shield_no_frth_pulse.append(sensor_loc_3)
+    elif pulse == pt4:
+        shield_no_frth_pulse.append(sensor_loc_4)
+    return shield_no_frth_pulse
 
 
 def fist_pulse(pt1, pt2, pt3, pt4):
@@ -109,7 +156,7 @@ def fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4):
     return frth_pulse[-1]
 
 
-def compute_location(fst_1, sec_2, thrd_3, frth_4):
+def compute_location(fst_1, sec_2, thrd_3, frth_4, shield_loc):
     # pressure wave velocity
     result_sum = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
     result_diff = diff_calc(frth_4, fst_1)
@@ -129,7 +176,7 @@ def compute_location(fst_1, sec_2, thrd_3, frth_4):
     # shield difference
     shield_diff = div_calc(dist_diff, shield_width)
 
-    event_location = abs(diff_calc(RS100, shield_diff))
+    event_location = abs(diff_calc(shield_loc, shield_diff))
 
     # print(f'Event occurred at shield {round(shield_diff, 2)} shields to the MG side of shields '
     #       f'{event_location + shield_diff}. Event at shield {round(event_location)} ')
@@ -138,10 +185,11 @@ def compute_location(fst_1, sec_2, thrd_3, frth_4):
     return round(event_location), round(shield_diff, 2)
 
 
-def compute_location_case2(fst_1, sec_2, thrd_3, frth_4):
+def compute_location_case2(fst_1, sec_2, thrd_3, frth_4, shield_loc):
     # distance between pulse locations
     dist_from_mg = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
     dist_from_tg = sum_calc(dist_pt3_to_pt4, dist_pt2_to_pt3)
+
 
     # velocity of each pressure wave
     vel_from_mg = div_calc(dist_from_mg, diff_calc(frth_4, sec_2))
@@ -156,15 +204,15 @@ def compute_location_case2(fst_1, sec_2, thrd_3, frth_4):
 
     # solve for x
     x = cal_equ(total_vel, vel_from_mg, vel_from_tg, dist_pt2_to_pt3)
+
     # shield difference
     shield_diff_x = div_calc(x, shield_width)
-    event_location_X = abs(sum_calc(RS050, abs(shield_diff_x)))
+    event_location_X = abs(sum_calc(shield_loc[0][0], abs(shield_diff_x)))
 
     # solve for y
     y = diff_calc(dist_pt2_to_pt3, x)
     shield_diff_y = div_calc(y, shield_width)
-    print(shield_diff_y, 'Y')
-    return round(event_location_X), round(abs(shield_diff_x), 2)
+    return round(event_location_X), round(abs(shield_diff_x), 2), shield_loc
 
 
 def main(pt1, pt2, pt3, pt4):
@@ -173,8 +221,15 @@ def main(pt1, pt2, pt3, pt4):
         sec_pulse = second_pulse(fst_pulse, pt_1, pt_2, pt_3, pt_4)
         thrd_pulse = third_pulse(fst_pulse, sec_pulse, pt_1, pt_2, pt_3, pt_4)
         frth_pulse = fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4)
-        location = compute_location_case2(fst_pulse, sec_pulse, thrd_pulse, frth_pulse)
-        print(location)
+
+        loc_1 = get_shield_no1(pt_1, pt_2, pt_3, pt_4, fst_pulse)
+        loc_2 = get_shield_no1(pt_1, pt_2, pt_3, pt_4, sec_pulse)
+        loc_3 = get_shield_no1(pt_1, pt_2, pt_3, pt_4, thrd_pulse)
+        loc_4 = get_shield_no1(pt_1, pt_2, pt_3, pt_4, frth_pulse)
+        shield_loc = (loc_1, loc_2, loc_3, loc_4)
+
+        location = compute_location_case2(fst_pulse, sec_pulse, thrd_pulse, frth_pulse, shield_loc)
+
         return location
     except Exception as e:
         pass
