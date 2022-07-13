@@ -1,8 +1,9 @@
 import pyodbc
 import pandas as pd
 from datetime import datetime
-import time
+import warnings
 
+warnings.filterwarnings("ignore")
 current_date = datetime.date(datetime.now())
 
 
@@ -43,6 +44,7 @@ def query():
 
 
 def makePI_frame():
+
     try:
         frames = query()
         df2 = pd.concat(frames)

@@ -1,16 +1,16 @@
+import time
+import pandas as pd
+
 import calc_methods
 import config_parser
 import db_manager
 import global_conf_variables
 import pressure_event_location
+import get_PI_press_data
 
-import pandas as pd
+start_time = time.time()
 
 values = global_conf_variables.get_values()
-sensor_loc_1 = values[10]
-sensor_loc_2 = values[11]
-sensor_loc_3 = values[12]
-sensor_loc_4 = values[13]
 
 # Note: assumes air flow always moves from maingate to tailgate
 
@@ -20,13 +20,13 @@ pt3 = []
 pt4 = []
 
 
-def get_pulse_location(data):
+def get_pulse_times(data):
     # defines the times of the first, second, third and fourth pules
     for j in range(len(data)):
-        time_event1 = data.at[j, 'Time stamp']
-        diff_pressure_MG = data.at[j, 'MG test value event 1']
-        # time_event2 = data.at[j, 'Time stamp2']
-        diff_pressure_TG = data.at[j, 'TG test value event 1']
+        time_event1 = data.at[j, 'TimeStampMG']
+        diff_pressure_MG = data.at[j, 'PValuesMG']
+        # time_event2 = data.at[j, 'TimeStampTG']
+        diff_pressure_TG = data.at[j, 'PValuesTG']
 
         try:
             # pulse at location 1
@@ -45,23 +45,46 @@ def get_pulse_location(data):
             pass
 
 
-def db_manager_controller(dbfields, shielddiff, eventlocation, event_id=111):
-    fstPulse = calc_methods.get_minimum(pt1, pt2, pt3, pt4)
-    values = global_conf_variables.get_values()  # get db creds
-    event_data = event_id, shielddiff, eventlocation, pt1[0], pt2[0], pt3[0], pt4[0], sensor_loc_1, sensor_loc_2, \
-                 sensor_loc_3, sensor_loc_4, fstPulse
+def db_manager_controller(dbfields, shielddiff, eventlocation, shieldloc):
+    event_id = calc_methods.make_eventID(' '.join(pt1))
 
-    sql = db_manager.SQL(values[6], values[7], values[8], values[9])  # db creds
-    sql.image_data(event_data, dbfields)
+    vent_velocity = db_manager.pi_query_vent()
+    values = global_conf_variables.get_values()
+    event_data = event_id, shielddiff, eventlocation, pt1[0], pt2[0], pt3[0], pt4[0], shieldloc[0], \
+                 shieldloc[1], shieldloc[2], shieldloc[3], vent_velocity
+
+    sql = db_manager.SQL(values[5], values[6], values[7], values[8], values[9])  # db creds
+    exists = sql.check_entry_exist(event_id)
+    if not exists:
+        sql.insert(event_data, dbfields)
+    else:
+        print("Event, [{}], already in the database, skipping....".format(event_id))
 
 
 if __name__ == "__main__":
-    #df = './test_data/LW pressure event sample data_210826.csv'
-    df = './test_data/LW pressure event sample data_211204 - Copy.csv'
-    # parsedates = lambda x: datetime.strptime(x, '%M:%S.%f')
-    df = pd.read_csv(df)
+    while True:
+        time.sleep(1)
+        try:
+            #df = './test_data/LW pressure event sample data_210826.csv'
+            #df = pd.read_csv(df)
+            df = get_PI_press_data.makePI_frame()
+            # for some reason df.isnull().any() did not resolve to True wih a NaN
+            # check_null = df['PValuesMG'].iloc[0]
+            get_pulse_times(df)
 
-    get_pulse_location(df)
-    event_location, shield_diff = pressure_event_location.main(pt1, pt2, pt3, pt4)
-    db_fields = config_parser.db_json_parser()
-    db_manager_controller(db_fields, shield_diff, event_location)
+            # to ensure only send data to db if conditions in get_pulse_location are met
+            list_of_lists = [pt1, pt2, pt3, pt4]
+            result = calc_methods.check_if_empty(list_of_lists)
+
+            if not result:
+                event_location, shield_diff, shield_loc = pressure_event_location.main(pt1, pt2, pt3, pt4)
+                db_fields = config_parser.db_json_parser()
+                db_manager_controller(db_fields, shield_diff, event_location, shield_loc[0])
+                print('Event detected')
+            else:
+                print('No event detected')
+
+        except Exception as e:
+            print(e)
+
+        # print(time.time() - start_time)
