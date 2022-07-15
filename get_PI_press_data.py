@@ -37,6 +37,7 @@ def query():
                     and a.TimeStamp > '{current_date}'
                  '''
         df = pd.read_sql(select, conn)
+        df.to_csv('pi_gm_tg')
         df = df.iloc[-1:]
         df['Field_Name'] = i
         frames.append(df)
@@ -64,3 +65,4 @@ def makePI_frame():
         return df3
     except Exception as e:
         pass
+

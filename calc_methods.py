@@ -45,5 +45,11 @@ def save_to_csv(event_data):
     print(event_data)
 
 
+def swich_case(fst_1, sec_2, thrd_3, frth_4):
+    if thrd_3/sec_2 > 1:
+        return True
+
+
+
 def invalid_op(x):
     raise Exception("Invalid operation")
