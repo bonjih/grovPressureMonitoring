@@ -13,12 +13,8 @@ class SQL:
         self.db = db
         self.driver = driver
         self.server = server
-        #self.engine = create_engine("mssql+pyodbc://@%s" % 'SQLEXPRESS')
         self.engine = create_engine(f'mssql+pyodbc://{user}:{pwd}@{server}/{db}?driver={driver}')
         self.conn = pyodbc.connect(user=user, password=pwd, database=db, driver=driver, server=server)
-
-        #self.conn = pyodbc.connect(user="admin", password="tailg@teanalysis2021!", host="pulse_shield_locator",
-                                   #database="pressure_test", driver="SQL Server", server="localhost\\SQLEXPRESS")
 
     def check_entry_exist(self, event_id):
         cur = self.conn.cursor()
