@@ -1,7 +1,6 @@
 import db_manager
 import global_conf_variables
-from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, get_minimum, invalid_op, cal_equ, convert_time, \
-    check_if_empty
+from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, get_minimum, cal_equ, convert_time, check_if_empty
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -23,29 +22,25 @@ sensor_loc_3 = values[12]
 sensor_loc_4 = values[13]
 
 LW_face_area = LW_face_area  # m^2
-
 shield_width = shield_width  # meters
-# TG104_5to6_BHDG_Vel_Sensor = 84  # m^/3s
 
 # ventilation velocity from PI data, assumed same both directions
 PW_to_TG = vent_velocity
 PW_to_MG = vent_velocity
 
-shield_no_fst_pulse = []
-
-# TODO make get_shield_no* into a single def
+shield_no_pulse = []
 
 
 def get_shield_no(pt1, pt2, pt3, pt4, pulse):
     if pulse == pt1:
-        shield_no_fst_pulse.append(sensor_loc_1)
+        shield_no_pulse.append(sensor_loc_1)
     elif pulse == pt2:
-        shield_no_fst_pulse.append(sensor_loc_2)
+        shield_no_pulse.append(sensor_loc_2)
     elif pulse == pt3:
-        shield_no_fst_pulse.append(sensor_loc_3)
+        shield_no_pulse.append(sensor_loc_3)
     elif pulse == pt4:
-        shield_no_fst_pulse.append(sensor_loc_4)
-    return shield_no_fst_pulse
+        shield_no_pulse.append(sensor_loc_4)
+    return shield_no_pulse
 
 
 def fist_pulse(pt1, pt2, pt3, pt4):
