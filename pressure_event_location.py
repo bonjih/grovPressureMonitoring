@@ -15,7 +15,7 @@ dist_pt3_to_pt4 = values[2]
 LW_face_area = values[3]
 shield_width = values[4]
 
-vent_velocity = 6 #db_manager.pi_query_vent()
+vent_velocity = db_manager.pi_query_vent()
 
 sensor_loc_1 = values[10]
 sensor_loc_2 = values[11]
@@ -28,52 +28,15 @@ shield_width = shield_width  # meters
 # TG104_5to6_BHDG_Vel_Sensor = 84  # m^/3s
 
 # ventilation velocity from PI data, assumed same both directions
-PW_to_TG = 6
-PW_to_MG = 6
+PW_to_TG = vent_velocity
+PW_to_MG = vent_velocity
 
 shield_no_fst_pulse = []
 
 # TODO make get_shield_no* into a single def
 
 
-def get_shield_no1(pt1, pt2, pt3, pt4, pulse):
-    if pulse == pt1:
-        shield_no_fst_pulse.append(sensor_loc_1)
-    elif pulse == pt2:
-        shield_no_fst_pulse.append(sensor_loc_2)
-    elif pulse == pt3:
-        shield_no_fst_pulse.append(sensor_loc_3)
-    elif pulse == pt4:
-        shield_no_fst_pulse.append(sensor_loc_4)
-
-    return shield_no_fst_pulse
-
-
-def get_shield_no2(pt1, pt2, pt3, pt4, pulse):
-    if pulse == pt1:
-        shield_no_fst_pulse.append(sensor_loc_1)
-    elif pulse == pt2:
-        shield_no_fst_pulse.append(sensor_loc_2)
-    elif pulse == pt3:
-        shield_no_fst_pulse.append(sensor_loc_3)
-    elif pulse == pt4:
-        shield_no_fst_pulse.append(sensor_loc_4)
-    return shield_no_fst_pulse
-
-
-def get_shield_no3(pt1, pt2, pt3, pt4, pulse):
-    if pulse == pt1:
-        shield_no_fst_pulse.append(sensor_loc_1)
-    elif pulse == pt2:
-        shield_no_fst_pulse.append(sensor_loc_2)
-    elif pulse == pt3:
-        shield_no_fst_pulse.append(sensor_loc_3)
-    elif pulse == pt4:
-        shield_no_fst_pulse.append(sensor_loc_4)
-    return shield_no_fst_pulse
-
-
-def get_shield_no4(pt1, pt2, pt3, pt4, pulse):
+def get_shield_no(pt1, pt2, pt3, pt4, pulse):
     if pulse == pt1:
         shield_no_fst_pulse.append(sensor_loc_1)
     elif pulse == pt2:
@@ -164,7 +127,6 @@ def fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4):
 
 
 def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
-
     if thrd_3 in thrd_3:
         # distance between pulse locations
         result_sum = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
@@ -181,7 +143,7 @@ def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
 
         # shield difference
         shield_diff = div_calc(dist_diff, shield_width)
-        event_location = abs(diff_calc(shield_loc[0][0], shield_diff))
+        event_location = abs(diff_calc(shield_loc[0], shield_diff))
         return round(event_location), round(shield_diff, 2), shield_loc
 
     else:
@@ -210,7 +172,7 @@ def compute_location_case2(fst_1, sec_2, thrd_3, frth_4, shield_loc):
 
         # shield difference
         shield_diff_x = div_calc(x, shield_width)
-        event_location_X = abs(sum_calc(shield_loc[0][0], abs(shield_diff_x)))
+        event_location_X = abs(sum_calc(shield_loc[0], abs(shield_diff_x)))
 
         # solve for y
         y = diff_calc(dist_pt2_to_pt3, x)
@@ -228,17 +190,21 @@ def main(pt1, pt2, pt3, pt4):
         thrd_pulse = third_pulse(fst_pulse, sec_pulse, pt_1, pt_2, pt_3, pt_4)
         frth_pulse = fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4)
 
-        loc_1 = get_shield_no1(pt_1, pt_2, pt_3, pt_4, fst_pulse)
-        loc_2 = get_shield_no2(pt_1, pt_2, pt_3, pt_4, sec_pulse)
-        loc_3 = get_shield_no3(pt_1, pt_2, pt_3, pt_4, thrd_pulse)
-        loc_4 = get_shield_no4(pt_1, pt_2, pt_3, pt_4, frth_pulse)
+        pulse_list = [fst_pulse, sec_pulse, thrd_pulse, frth_pulse]
+        loc_list = []
 
-        shield_loc = (loc_1, loc_2, loc_3, loc_4)
+        for i in pulse_list:
+            loc = get_shield_no(pt_1, pt_2, pt_3, pt_4, i)
+            loc_list.append(loc)
 
-        if not check_if_empty(shield_loc[2]):
+        shield_loc = [loc_list[0][0], loc_list[0][1], loc_list[0][2], loc_list[0][3]]
+
+        if not check_if_empty(shield_loc):
             a = diff_calc(sec_pulse, fst_pulse)
             b = diff_calc(thrd_pulse, fst_pulse)
 
+            # when calculating Vmg and the denom is very small (when pulses 2 and 3 are very close together)
+            # with a large nominator, makes a huge distance, so have to multiply
             if a < 1 and b < 1:
                 location = compute_location_case1(fst_pulse, sec_pulse, thrd_pulse, frth_pulse, shield_loc)
             else:
