@@ -1,68 +1,65 @@
 import pyodbc
 import pandas as pd
-from datetime import datetime
+import datetime
 import warnings
 
 warnings.filterwarnings("ignore")
-current_date = datetime.date(datetime.now())
+
+current_dateTime = datetime.datetime.now()
+
+# get last 5 seconds of events
+x = 5
+result = datetime.datetime.now() - datetime.timedelta(seconds=x)
+
+conn = pyodbc.connect(
+    "Driver=PI SQL Client; AF Server=AISGROOSI01; AF Database='Grosvenor MAC'; Integrated Security=SSPI;",
+    autocommit=True)
 
 
-def PI_connect():
-    conn = pyodbc.connect(
-        "Driver=PI SQL Client; AF Server=AISGROOSI01; AF Database='Grosvenor MAC'; Integrated Security=SSPI;",
-        autocommit=True)
-    cursor = conn.cursor()
-    return cursor, conn
+def pi_query_pressure():
+    select = f'''
+               SELECT eh.Name as Element
+                   ,ea.Name as Attribute
+                   ,Format(a.TimeStamp, 'yyyy-MM-dd HH:mm:ss.ffffff') as TimeStamp
+                   ,coalesce(a.Value_Double, a.Value_Int, case when a.Value_String = 'true' then 1 when a.Value_String 
+                   = 'false' then 0 else null end) Value
+               
+                   FROM Element.ElementHierarchy eh
+                   inner join Element.Attribute ea ON ea.ElementID = eh.ElementID
+                   inner join Element.Archive a ON a.AttributeID = ea.ID
+                   WHERE ea.IsValueGood = 1 
+                   and ea.IsValueQuestionable = 0
+                   and eh.name in ('Pressure Monitoring')
+                   and ea.name in ('Differential pressure reading MG', 'Differential pressure reading TG') 
+                   and a.TimeStamp between '{result}' and '{current_dateTime}'
+             '''
+    df = pd.read_sql(select, conn)
+    df.drop('Element', axis=1, inplace=True)
+    mg = df.loc[df['Attribute'].isin(['Differential pressure reading MG'])]
+    mg.drop('Attribute', axis=1, inplace=True)
+    tg = df.loc[df['Attribute'].isin(['Differential pressure reading TG'])]
+    tg.drop('Attribute', axis=1, inplace=True)
+    mg.rename(columns={'TimeStamp': 'TimeStampMG', 'Value': 'PValuesMG'}, inplace=True)
+    tg.rename(columns={'TimeStamp': 'TimeStampTG', 'Value': 'PValuesTG'}, inplace=True)
+    tg.reset_index(drop=True, inplace=True)
+    df2 = pd.concat([mg, tg], join='outer', axis=1)
+    return df2
 
 
-pressureMG = "Differential pressure reading MG"
-pressureTG = "Differential pressure reading TG"
-
-
-def query():
-    frames = []
-    att_lst = [pressureMG, pressureTG]
-
-    for i in att_lst:
-        cursor, conn = PI_connect()
-        select = f'''
-                    SELECT a.TimeStamp
-                    ,a.Value_Double
-                    FROM Element.Element e
-                    inner join Element.Attribute ea ON ea.ElementID = e.ID
-                    inner join Element.Archive a ON a.AttributeID = ea.ID
-                    inner join Element.ElementHierarchy eh ON eh.ElementID = ea.ElementID
-                    WHERE e.Name in ('Pressure Monitoring')
-                    and ea.name in ('{i}')  
-                    and a.TimeStamp > '{current_date}'
-                 '''
-        df = pd.read_sql(select, conn)
-        df.to_csv('pi_gm_tg')
-        df = df.iloc[-1:]
-        df['Field_Name'] = i
-        frames.append(df)
-    return frames
-
-
-def makePI_frame():
-
-    try:
-        frames = query()
-        df2 = pd.concat(frames)
-        mg = df2.loc[df2['Field_Name'].isin(['Differential pressure reading MG'])]
-        tg = df2.loc[df2['Field_Name'].isin(['Differential pressure reading TG'])]
-        date_mg = mg['TimeStamp'].to_string()[11:]
-        date_tg = tg['TimeStamp'].to_string()[11:]
-        value_mg = mg['Value_Double'].to_string()[9:]
-        value_tg = tg['Value_Double'].to_string()[9:]
-
-        data = {'TimeStampMG': [date_mg],
-                'PValuesMG': [value_mg],
-                'TimeStampTG': [date_tg],
-                'PValuesTG': [value_tg],
-                }
-        df3 = pd.DataFrame(data)
-        return df3
-    except Exception as e:
-        pass
-
+# gets last ventilation velocity value
+def pi_query_vent():
+    select = f'''
+                SELECT a.TimeStamp
+                ,a.Value_Double
+                FROM Element.Element e
+                inner join Element.Attribute ea ON ea.ElementID = e.ID
+                inner join Element.Archive a ON a.AttributeID = ea.ID
+                inner join Element.ElementHierarchy eh ON eh.ElementID = ea.ElementID
+                WHERE e.Name in ('Pressure Monitoring')
+                and ea.name in ('Ventillation Velocity')
+                and a.TimeStamp > '{current_dateTime}'
+                '''
+    df = pd.read_sql(select, conn)
+    df = df.iloc[-1:]
+    df = df['Value_Double']
+    return df.to_string()[7:]
