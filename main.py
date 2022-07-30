@@ -77,4 +77,4 @@ def main():
             time.sleep(0)
             time_q.clear()
     except Exception as e:
-        pass
+        print(e)
