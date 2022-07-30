@@ -1,17 +1,11 @@
 import time
 
-import calc_methods
 import config_parser
 import db_manager
+import get_PI_press_data
 import global_conf_variables
 import pressure_event_location
-import get_PI_press_data
-
-start_time = time.time()
-
-values = global_conf_variables.get_values()
-
-# Note: assumes air flow always moves from maingate to tailgate
+from calc_methods import check_if_empty, make_eventID, w_query_time
 
 pt1 = []
 pt2 = []
@@ -22,70 +16,65 @@ pt4 = []
 def get_pulse_times(data):
     # defines the times of the first, second, third and fourth pules
     for j in range(len(data)):
+
         time_event1 = data.at[j, 'TimeStampMG']
         diff_pressure_MG = data.at[j, 'PValuesMG']
         # time_event2 = data.at[j, 'TimeStampTG']
         diff_pressure_TG = data.at[j, 'PValuesTG']
 
-        try:
-            # pulse at location 1
-            if diff_pressure_MG >= 0.300 and diff_pressure_TG < 0.300:
-                pt1.append(time_event1)
-            # pulse at location 2
-            elif diff_pressure_TG >= 0.300 and diff_pressure_MG > -0.300 and diff_pressure_MG < 0.300:
-                pt2.append(time_event1)
-            # pulse at location 3
-            elif diff_pressure_MG <= -0.300 < diff_pressure_TG < 0.300:
-                pt3.append(time_event1)
-            # pulse at location 4
-            elif diff_pressure_TG <= -0.300 < diff_pressure_MG:
-                pt4.append(time_event1)
-        except Exception as e:
-            pass
+        if diff_pressure_MG >= 0.3 and diff_pressure_TG < 0.3:
+            pt1.append(time_event1)
+        elif diff_pressure_TG >= 0.3 and diff_pressure_MG > -0.3 and diff_pressure_MG < 0.3:
+            pt2.append(time_event1)
+        elif diff_pressure_MG <= -0.3 < diff_pressure_TG < 0.3:
+            pt3.append(time_event1)
+        elif diff_pressure_TG <= -0.3 < diff_pressure_MG:
+            pt4.append(time_event1)
 
 
-def db_manager_controller(dbfields, shielddiff, eventlocation, shieldloc):
-    event_id = calc_methods.make_eventID(' '.join(pt1))
-    vent_velocity = db_manager.pi_query_vent()
-    values = global_conf_variables.get_values()  # db creds
+def db_manager_controller(dbfields, event_id, shielddiff, eventlocation, shieldloc, vent_velocity):
+    value = global_conf_variables.get_values()  # db creds
 
-    event_data = int(event_id), shielddiff, eventlocation, pt1[0], pt2[0], pt3[0], pt4[0], shieldloc[0], \
-                 shieldloc[1], shieldloc[2], shieldloc[3], float(vent_velocity[1:])
+    event_data = int(event_id), shielddiff, eventlocation, pt1, pt2, pt3, pt4, shieldloc[0][0], shieldloc[0][1], \
+                 shieldloc[0][2], shieldloc[0][3], vent_velocity[1:]
 
-    sql = db_manager.SQL(values[5], values[6], values[7], values[8], values[9])
+    sql = db_manager.SQL(value[5], value[6], value[7], value[8], value[9])
     exists = sql.check_entry_exist(event_id)
     if not exists:
-        print(f'Event detected id: [{event_id}] at {pt1[0]}')
+        print(f'Event detected id: [{event_id}] at {pt2[0]}')  # todo add case when pt1 etc not empty
         sql.insert(event_data, dbfields)
+
     else:
         pass
 
 
-if __name__ == "__main__":
-    while True:
-        time.sleep(0)
-        try:
-            #df = './test_data/LW pressure event sample data_210826.csv'
-            #df = pd.read_csv(df)
-            df = get_PI_press_data.makePI_frame()
-            # for some reason df.isnull().any() did not resolve to True wih a NaN
-            # check_null = df['PValuesMG'].iloc[0]
+def main():
+    try:
+        time_q = []
+
+        while True:
+            start_time = time.time()
+            df = get_PI_press_data.pi_query_pressure()
+
+            q_time = time.time() - start_time
+            time_q.append(q_time)
+            q_time = int(time_q[-1])
+            if q_time > 30:
+                w_query_time(time_q)
+
             get_pulse_times(df)
 
-            # to ensure only send data to db if conditions in get_pulse_location are met
+            # if pt1 -> pt4 is empty
             list_of_lists = [pt1, pt2, pt3, pt4]
-            result = calc_methods.check_if_empty(list_of_lists)
+            result = check_if_empty(list_of_lists)
 
             if not result:
-                event_location, shield_diff, shield_loc = pressure_event_location.main(pt1, pt2, pt3, pt4)
+                event_location, shield_diff, shield_loc, v_velocity = pressure_event_location.main(pt1, pt2, pt3, pt4)
+                event_id = make_eventID(pt1, pt2, pt3, pt4)
                 db_fields = config_parser.db_json_parser()
-                db_manager_controller(db_fields, shield_diff, event_location, shield_loc)
+                db_manager_controller(db_fields, event_id, shield_diff, event_location, shield_loc, v_velocity)
                 pressure_event_location.shield_no_pulse.clear()
-
-            else:
-                print('No event detected')
-
-        except Exception as e:
-            print(e)
-
-        # print(time.time() - start_time)
+            time.sleep(0)
+            time_q.clear()
+    except Exception as e:
+        pass
