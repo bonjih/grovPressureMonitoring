@@ -19,7 +19,7 @@ def get_pulse_times(data):
 
         time_event1 = data.at[j, 'TimeStampMG']
         diff_pressure_MG = data.at[j, 'PValuesMG']
-        # time_event2 = data.at[j, 'TimeStampTG']
+        # time_event2 = data.at[j, 'TimeStampTG'] # todo
         diff_pressure_TG = data.at[j, 'PValuesTG']
 
         if diff_pressure_MG >= 0.3 and diff_pressure_TG < 0.3:
