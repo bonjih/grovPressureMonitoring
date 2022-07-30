@@ -29,10 +29,12 @@ class SQL:
 
     def insert(self, event_data, db_fields):
         df = pd.DataFrame(event_data)
+        df = df.apply(lambda x: x.explode().astype(str).groupby(level=0).agg(", ".join))
         df = df.transpose()
         df.columns = db_fields
-        #df.to_csv('test.csv', mode='a', index=False)
+        df['fst_pulse_time'] = df['fst_pulse_time'].astype('datetime64[ns]')
+        df['sec_pulse_time'] = df['sec_pulse_time'].astype('datetime64[ns]')
+        df['trd_pulse_time'] = df['trd_pulse_time'].astype('datetime64[ns]')
+        df['fth_pulse_time'] = df['fth_pulse_time'].astype('datetime64[ns]')
+        # df.to_csv('test.csv', mode='a', index=False)
         df.to_sql('pulse_shield_locator', con=self.engine, if_exists='append', index=False)
-
-
-
