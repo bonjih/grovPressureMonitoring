@@ -1,11 +1,19 @@
-import time
+###################################
+#
+#  - This scripts detects the location of a gas event coming out of the LW face.
+#  - The resulting pressure wave >+/- 0.3kPa direction is tracked as it passes the MG and TG pressure sensors
+#  - The results are recoded in the MAC database, table 'pulse_shield_locator'
+#
+###################################
 
+import time
+import pandas as pd
 import config_parser
 import db_manager
 import get_PI_press_data
 import global_conf_variables
 import pressure_event_location
-from calc_methods import check_if_empty, make_eventID, w_query_time
+from calc_methods import check_if_empty, make_eventID, w_query_time, clear_list
 
 pt1 = []
 pt2 = []
@@ -43,18 +51,19 @@ def db_manager_controller(dbfields, event_id, shielddiff, eventlocation, shieldl
     if not exists:
         print(f'Event detected id: [{event_id}] at {pt2[0]}')  # todo add case when pt1 etc not empty
         sql.insert(event_data, dbfields)
-
     else:
         pass
 
 
-def main():
+if __name__ == "__main__":
     try:
         time_q = []
 
         while True:
             start_time = time.time()
-            df = get_PI_press_data.pi_query_pressure()
+            df = './test_data/LW pressure event sample data_.csv'
+            df = pd.read_csv(df)
+            #df = get_PI_press_data.pi_query_pressure()
 
             q_time = time.time() - start_time
             time_q.append(q_time)
@@ -76,5 +85,6 @@ def main():
                 pressure_event_location.shield_no_pulse.clear()
             time.sleep(0)
             time_q.clear()
+            pt1.clear(), pt2.clear(), pt3.clear(), pt4.clear()
     except Exception as e:
         print(e)

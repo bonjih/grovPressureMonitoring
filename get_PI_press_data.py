@@ -7,21 +7,14 @@ warnings.filterwarnings("ignore")
 
 current_dateTime = datetime.datetime.now()
 
-# get last 30 seconds of events
-x = 30
-result = datetime.datetime.now() - datetime.timedelta(seconds=x)
+# get last 5 mins of events
+x = 300
+#start_date = datetime.datetime.now() - datetime.timedelta(seconds=x)
 
 # for testing historical
-start = '2022-02-25'
-end = '2022-02-27'
-start1 = '2022-04-01'
-end1 = '2022-04-30'
-start2 = '2022-05-01'
-end2 = '2022-05-31'
-start3 = '2022-06-01'
-end3 = '2022-06-30'
-start4 = '2022-07-01'
-end4 = '2022-07-31'
+start_date  = '2022-08-02'
+end_date = '2022-08-03'
+
 
 conn = pyodbc.connect(
     "Driver=PI SQL Client; AF Server=AISGROOSI01; AF Database='Grosvenor MAC'; Integrated Security=SSPI;",
@@ -42,7 +35,7 @@ def pi_query_pressure():
                    and ea.IsValueQuestionable = 0
                    and eh.name in ('Pressure Monitoring')
                    and ea.name in ('Differential pressure reading MG', 'Differential pressure reading TG') 
-                   and a.TimeStamp between '{result}' and '{current_dateTime}'
+                   and a.TimeStamp between '{start_date}' and '{end_date}'
              '''
     df = pd.read_sql(select, conn)
     df.drop('Element', axis=1, inplace=True)
@@ -68,7 +61,7 @@ def pi_query_vent():
                 inner join Element.ElementHierarchy eh ON eh.ElementID = ea.ElementID
                 WHERE e.Name in ('Pressure Monitoring')
                 and ea.name in ('Ventillation Velocity')
-                and a.TimeStamp between '{start}' and '{end}'
+                and a.TimeStamp between '{start_date}' and '{end_date}'
                 '''
     df = pd.read_sql(select, conn)
     df = df.iloc[-1:]

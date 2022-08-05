@@ -1,25 +1,12 @@
 from datetime import datetime
 import time
-
 import pandas as pd
 
 start_time = time.time()
 
 
-def diff_calc(a, b):
-    return float(a) - float(b)
-
-
 def div_calc(a, b):
     return float(a) / float(b)
-
-
-def sum_calc(a, b):
-    return float(a) + float(b)
-
-
-def mult_calc(a, b):
-    return float(a) * float(b)
 
 
 def convert_time(time_str):
@@ -78,3 +65,6 @@ def make_eventID(pt1, pt2, pt3, pt4):
         p2 = ' '.join(pt2)
         return p2[2:4] + p2[5:7] + p2[8:10]
 
+
+def clear_list(lst):
+    lst.clear()

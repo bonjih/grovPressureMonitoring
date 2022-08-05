@@ -1,7 +1,7 @@
-import global_conf_variables
-from calc_methods import sum_calc, diff_calc, div_calc, mult_calc, cal_equ, convert_time, check_if_empty, strip_zeros
 import warnings
 
+import global_conf_variables
+from calc_methods import div_calc, cal_equ, convert_time, check_if_empty, strip_zeros
 from get_PI_press_data import pi_query_vent
 
 warnings.filterwarnings("ignore")
@@ -143,21 +143,21 @@ def fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4):
 def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
     if str(thrd_3) in str(thrd_3):
         # distance between pulse locations
-        result_sum = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
+        result_sum = (float(dist_pt1_to_pt2) + float(dist_pt2_to_pt3))
 
         # velocity of each pressure wave
-        Vmg = div_calc(result_sum, diff_calc(frth_4, fst_1))
-        vel_total = sum_calc(PW_to_TG, PW_to_MG)  # pressure wave to MG (headwind) and to TG (tailwind)
-        Vtg = sum_calc(Vmg, vel_total)  # pressure_wave_vol tailgate m/s
+        Vmg = div_calc(result_sum, (float(frth_4) - float(fst_1)))
+        vel_total = (float(PW_to_TG) + float(PW_to_MG))  # pressure wave to MG (headwind) and to TG (tailwind)
+        Vtg = (float(Vmg) + float(vel_total))  # pressure_wave_vol tailgate m/s
 
         # Event location determination
-        diff_to_SecNdandTailtGate = diff_calc(thrd_3, sec_2)
-        total_vel = sum_calc(Vmg, Vtg)
-        dist_diff = mult_calc(total_vel, diff_to_SecNdandTailtGate)
+        diff_to_SecNdandTailtGate = (thrd_3 - sec_2)
+        total_vel = (float(Vmg) + float(Vtg))
+        dist_diff = (float(total_vel) * float(diff_to_SecNdandTailtGate))
 
         # shield difference
-        shield_diff = div_calc(dist_diff, shield_width)
-        event_location = abs(diff_calc(shield_loc[0][0], shield_diff))
+        shield_diff = (float(dist_diff) / float(shield_width))
+        event_location = abs(shield_loc[0][0] - float(shield_diff))
         return round(event_location), round(shield_diff, 2), shield_loc, PW_to_TG
 
     else:
@@ -165,31 +165,35 @@ def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
 
 
 def compute_location_case2(fst_1, sec_2, thrd_3, frth_4, shield_loc):
+    '''
+    Logic case 2 is required if Vmg and the denominator is very small, this happens e.g.when pulses 2 and 3 times
+    are very close together, making a large nominator, resulting in a huge shield distance.
+    '''
     if str(thrd_3) in str(thrd_3):
         # distance between pulse locations
-        dist_from_mg = sum_calc(dist_pt1_to_pt2, dist_pt2_to_pt3)
-        dist_from_tg = sum_calc(dist_pt3_to_pt4, dist_pt2_to_pt3)
+        dist_from_mg = (float(dist_pt1_to_pt2) + float(dist_pt2_to_pt3))
+        dist_from_tg = (float(dist_pt3_to_pt4) + float(dist_pt2_to_pt3))
         # velocity of each pressure wave
-        vel_from_mg = div_calc(dist_from_mg, diff_calc(frth_4, sec_2))
-        vel_from_tg = div_calc(dist_from_tg, diff_calc(thrd_3, fst_1))
+        vel_from_mg = div_calc(dist_from_mg, (float(frth_4) - float(sec_2)))
+        vel_from_tg = div_calc(dist_from_tg, (float(thrd_3) - float(fst_1)))
 
         # velocities of veneration
-        vel_vent_mg = sum_calc(vel_from_mg, PW_to_MG)
-        vel_vent_tg = diff_calc(vel_from_tg, PW_to_TG)
+        vel_vent_mg = (float(vel_from_mg) + float(PW_to_MG))
+        vel_vent_tg = (float(vel_from_tg) - float(PW_to_TG))
 
         # total time of velocities
-        total_vel = diff_calc(vel_vent_mg, vel_vent_tg)
+        total_vel = (float(vel_vent_mg) - float(vel_vent_tg))
 
         # solve for x
         x = cal_equ(total_vel, vel_from_mg, vel_from_tg, dist_pt2_to_pt3)
 
         # shield difference
-        shield_diff_x = div_calc(x, shield_width)
-        event_location_X = abs(sum_calc(shield_loc[0][0], abs(shield_diff_x)))
+        shield_diff_x = (x / shield_width)
+        event_location_X = abs(shield_loc[0][0] + abs(shield_diff_x))
 
         # solve for y
-        y = diff_calc(dist_pt2_to_pt3, x)
-        shield_diff_y = div_calc(y, shield_width)
+        y = (dist_pt2_to_pt3 - x)
+        shield_diff_y = (y / shield_width)
 
         return round(event_location_X), round(abs(shield_diff_x), 2), shield_loc, PW_to_TG
     else:
@@ -214,8 +218,8 @@ def main(pt1, pt2, pt3, pt4):
         shield_loc = [loc_list[0], loc_list[1], loc_list[2], loc_list[3]]
         # shield_loc = [loc_list[0][0], loc_list[0][1], loc_list[0][2], loc_list[0][3]]
         if not check_if_empty(shield_loc):
-            a = diff_calc(sec_pulse, fst_pulse)
-            b = diff_calc(thrd_pulse, fst_pulse)
+            a = (float(sec_pulse) - float(fst_pulse))
+            b = (float(thrd_pulse) - float(fst_pulse))
 
             # when calculating Vmg and the denom is very small (when pulses 2 and 3 are very close together)
             # with a large nominator, makes a huge distance, so have to multiply
@@ -223,7 +227,6 @@ def main(pt1, pt2, pt3, pt4):
                 location = compute_location_case1(fst_pulse, sec_pulse, thrd_pulse, frth_pulse, shield_loc)
             else:
                 location = compute_location_case2(fst_pulse, sec_pulse, thrd_pulse, frth_pulse, shield_loc)
-
             return location
         else:
             print('no thrid')
