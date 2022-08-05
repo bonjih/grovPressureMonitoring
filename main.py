@@ -4,16 +4,17 @@
 #  - The resulting pressure wave >+/- 0.3kPa direction is tracked as it passes the MG and TG pressure sensors
 #  - The results are recoded in the MAC database, table 'pulse_shield_locator'
 #
-###################################
+# - Refer to the following Confluence page for the documentation:
+#   https://anglo-data-analytics.atlassian.net/wiki/spaces/MAC/pages/45971144811/GRO+Differential+Pressure+Monitoring
+# ##################################
 
 import time
-import pandas as pd
 import config_parser
 import db_manager
 import get_PI_press_data
 import global_conf_variables
 import pressure_event_location
-from calc_methods import check_if_empty, make_eventID, w_query_time, clear_list
+from calc_methods import check_if_empty, make_eventID, w_query_time
 
 pt1 = []
 pt2 = []
@@ -22,9 +23,10 @@ pt4 = []
 
 
 def get_pulse_times(data):
-    # defines the times of the first, second, third and fourth pules
+    """
+    defines the times of the first, second, third and fourth pules
+    """
     for j in range(len(data)):
-
         time_event1 = data.at[j, 'TimeStampMG']
         diff_pressure_MG = data.at[j, 'PValuesMG']
         # time_event2 = data.at[j, 'TimeStampTG'] # todo
@@ -41,6 +43,9 @@ def get_pulse_times(data):
 
 
 def db_manager_controller(dbfields, event_id, shielddiff, eventlocation, shieldloc, vent_velocity):
+    """
+    calls db_manager, with event data
+    """
     value = global_conf_variables.get_values()  # db creds
 
     event_data = int(event_id), shielddiff, eventlocation, pt1, pt2, pt3, pt4, shieldloc[0][0], shieldloc[0][1], \
@@ -56,15 +61,17 @@ def db_manager_controller(dbfields, event_id, shielddiff, eventlocation, shieldl
 
 
 if __name__ == "__main__":
+    """
+    In a forever loop, querying PI every 60 seconds
+    The PI queries take the last 5 mins of data to analyse
+    """
     try:
         time_q = []
 
         while True:
             start_time = time.time()
-            df = './test_data/LW pressure event sample data_.csv'
-            df = pd.read_csv(df)
-            #df = get_PI_press_data.pi_query_pressure()
-
+            df = get_PI_press_data.pi_query_pressure()
+            # a check to find average query times
             q_time = time.time() - start_time
             time_q.append(q_time)
             q_time = int(time_q[-1])
@@ -83,7 +90,7 @@ if __name__ == "__main__":
                 db_fields = config_parser.db_json_parser()
                 db_manager_controller(db_fields, event_id, shield_diff, event_location, shield_loc, v_velocity)
                 pressure_event_location.shield_no_pulse.clear()
-            time.sleep(0)
+            time.sleep(10)
             time_q.clear()
             pt1.clear(), pt2.clear(), pt3.clear(), pt4.clear()
     except Exception as e:

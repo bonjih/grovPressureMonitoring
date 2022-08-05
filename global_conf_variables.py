@@ -17,17 +17,15 @@ class ConfigDict(dict):
     dist_AtoB = config['dist_shield_AtoB']  # distance from shield A to B
     dist_BtoC = config['dist_shield_BtoC']  # distance from shield B to C
     dist_CtoD = config['dist_shield_CtoD']  # distance from shield C to D
-    LW_face_area = config['LW_face_area']  # average area of the longwall face
-    shield_width = config['shield_width']  # shield width
-
-    # ventilation velocity (ventilation velocity assumption from event analyse 211204, 14/7/21)
     Vvent = config['vent_velocity']
-
-    sensor_1 = config['sensor_loc_1']  # sensor location 1 on shield A
+    sensor_1 = config['sensor_loc_1']  # sensor location 1 on shield A e.g. 2
     sensor_2 = config['sensor_loc_2']  # sensor location 2 on shield B
     sensor_3 = config['sensor_loc_3']  # sensor location 3 on shield C
     sensor_4 = config['sensor_loc_4']  # sensor location 4 on shield D
 
+    - Currently not used, kept if required
+    LW_face_area = config['LW_face_area']  # average area of the longwall face
+    shield_width = config['shield_width']  # shield width
     """
     def __init__(self):
         super().__init__()

@@ -49,10 +49,6 @@ def check_if_empty(list_of_lists):
     return all([not elem for elem in list_of_lists])
 
 
-def save_to_csv(event_data):
-    print(event_data)
-
-
 def invalid_op(x):
     raise Exception("Invalid operation")
 

@@ -5,15 +5,14 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-current_dateTime = datetime.datetime.now()
-
 # get last 5 mins of events
 x = 300
-#start_date = datetime.datetime.now() - datetime.timedelta(seconds=x)
+end_date = datetime.datetime.now()
+start_date = datetime.datetime.now() - datetime.timedelta(seconds=x)
 
 # for testing historical
-start_date  = '2022-08-02'
-end_date = '2022-08-03'
+# start_date  = '2022-08-02'
+# end_date = '2022-08-03'
 
 
 conn = pyodbc.connect(

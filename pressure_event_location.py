@@ -12,8 +12,8 @@ values = global_conf_variables.get_values()
 dist_pt1_to_pt2 = values[0]
 dist_pt2_to_pt3 = values[1]
 dist_pt3_to_pt4 = values[2]
-LW_face_area = values[3]
-shield_width = values[4]
+LW_face_area = values[3]  # m^2
+shield_width = values[4]  # meters
 
 vent_velocity = pi_query_vent()
 
@@ -22,9 +22,6 @@ sensor_loc_2 = values[11]
 sensor_loc_3 = values[12]
 sensor_loc_4 = values[13]
 
-LW_face_area = LW_face_area  # m^2
-shield_width = shield_width  # meters
-
 # ventilation velocity from PI data, assumed same both directions
 PW_to_TG = vent_velocity
 PW_to_MG = vent_velocity
@@ -32,6 +29,7 @@ PW_to_MG = vent_velocity
 shield_no_pulse = []
 
 
+# assigns the shield to a pulse
 def get_shield_no(pt1, pt2, pt3, pt4, pulse):
     if pulse == pt1:
         shield_no_pulse.append(sensor_loc_1)
@@ -44,6 +42,7 @@ def get_shield_no(pt1, pt2, pt3, pt4, pulse):
     return shield_no_pulse
 
 
+# the following logic determines the 1st to 4th pulse
 def fist_pulse(pt1, pt2, pt3, pt4):
     fst_list = []
     if pt1:
@@ -140,6 +139,7 @@ def fourth_pulse(fst_pulse, sec_pulse, thrd_pulse, pt_1, pt_2, pt_3, pt_4):
         return frth_pulse[-1]
 
 
+# calculations to determine event location
 def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
     if str(thrd_3) in str(thrd_3):
         # distance between pulse locations
@@ -147,28 +147,28 @@ def compute_location_case1(fst_1, sec_2, thrd_3, frth_4, shield_loc):
 
         # velocity of each pressure wave
         Vmg = div_calc(result_sum, (float(frth_4) - float(fst_1)))
-        vel_total = (float(PW_to_TG) + float(PW_to_MG))  # pressure wave to MG (headwind) and to TG (tailwind)
+        vel_total = (float(PW_to_TG) + float(PW_to_MG))  # pressure wave MG (headwind) and TG (tailwind)
         Vtg = (float(Vmg) + float(vel_total))  # pressure_wave_vol tailgate m/s
 
         # Event location determination
-        diff_to_SecNdandTailtGate = (thrd_3 - sec_2)
+        diff_to_SecandTailtGate = (thrd_3 - sec_2)
         total_vel = (float(Vmg) + float(Vtg))
-        dist_diff = (float(total_vel) * float(diff_to_SecNdandTailtGate))
+        dist_diff = (float(total_vel) * float(diff_to_SecandTailtGate))
 
         # shield difference
         shield_diff = (float(dist_diff) / float(shield_width))
         event_location = abs(shield_loc[0][0] - float(shield_diff))
         return round(event_location), round(shield_diff, 2), shield_loc, PW_to_TG
-
     else:
         pass
 
 
 def compute_location_case2(fst_1, sec_2, thrd_3, frth_4, shield_loc):
-    '''
+    """
     Logic case 2 is required if Vmg and the denominator is very small, this happens e.g.when pulses 2 and 3 times
     are very close together, making a large nominator, resulting in a huge shield distance.
-    '''
+    returns:
+    """
     if str(thrd_3) in str(thrd_3):
         # distance between pulse locations
         dist_from_mg = (float(dist_pt1_to_pt2) + float(dist_pt2_to_pt3))
@@ -191,10 +191,9 @@ def compute_location_case2(fst_1, sec_2, thrd_3, frth_4, shield_loc):
         shield_diff_x = (x / shield_width)
         event_location_X = abs(shield_loc[0][0] + abs(shield_diff_x))
 
-        # solve for y
+        # solve for y, not required, to verify results
         y = (dist_pt2_to_pt3 - x)
         shield_diff_y = (y / shield_width)
-
         return round(event_location_X), round(abs(shield_diff_x), 2), shield_loc, PW_to_TG
     else:
         pass
@@ -216,13 +215,13 @@ def main(pt1, pt2, pt3, pt4):
             loc_list.append(loc)
 
         shield_loc = [loc_list[0], loc_list[1], loc_list[2], loc_list[3]]
-        # shield_loc = [loc_list[0][0], loc_list[0][1], loc_list[0][2], loc_list[0][3]]
+
         if not check_if_empty(shield_loc):
             a = (float(sec_pulse) - float(fst_pulse))
             b = (float(thrd_pulse) - float(fst_pulse))
 
-            # when calculating Vmg and the denom is very small (when pulses 2 and 3 are very close together)
-            # with a large nominator, makes a huge distance, so have to multiply
+            # when calculating Vmg and the denominator is very small (when pulses 2 and 3 are very close together),
+            # therefore with a large nominator, makes a huge distance, so have to multiply
             if a < 1 and b < 1:
                 location = compute_location_case1(fst_pulse, sec_pulse, thrd_pulse, frth_pulse, shield_loc)
             else:
