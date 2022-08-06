@@ -60,7 +60,3 @@ def make_eventID(pt1, pt2, pt3, pt4):
     if pt2:
         p2 = ' '.join(pt2)
         return p2[2:4] + p2[5:7] + p2[8:10]
-
-
-def clear_list(lst):
-    lst.clear()
