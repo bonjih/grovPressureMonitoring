@@ -2,19 +2,24 @@
 #
 #  - This scripts detects the location of a gas event coming out of the LW face.
 #  - The resulting pressure wave >+/- 0.3kPa direction is tracked as it passes the MG and TG pressure sensors
+#  - Waits 299 seconds between queries and queries the prior 300 seconds of values
 #  - The results are recoded in the MAC database, table 'pulse_shield_locator'
 #
 # - Refer to the following Confluence page for the documentation:
 #   https://anglo-data-analytics.atlassian.net/wiki/spaces/MAC/pages/45971144811/GRO+Differential+Pressure+Monitoring
+#
 # ##################################
 
 import time
+
 import config_parser
 import db_manager
 import get_PI_press_data
 import global_conf_variables
 import pressure_event_location
-from calc_methods import check_if_empty, make_eventID, w_query_time
+from calc_methods import check_if_empty, make_eventID, w_query_time, save_to_csv
+
+now = time.strftime("%Y%m%d-%H%M%S")
 
 pt1 = []
 pt2 = []
@@ -33,12 +38,16 @@ def get_pulse_times(data):
         diff_pressure_TG = data.at[j, 'PValuesTG']
 
         if diff_pressure_MG >= 0.3 and diff_pressure_TG < 0.3:
+            save_to_csv(time_event1, 'location 1', now)
             pt1.append(time_event1)
         elif diff_pressure_TG >= 0.3 and diff_pressure_MG > -0.3 and diff_pressure_MG < 0.3:
+            save_to_csv(time_event1, 'location 2', now)
             pt2.append(time_event1)
         elif diff_pressure_MG <= -0.3 < diff_pressure_TG < 0.3:
+            save_to_csv(time_event1, 'location 3', now)
             pt3.append(time_event1)
         elif diff_pressure_TG <= -0.3 < diff_pressure_MG:
+            save_to_csv(time_event1, 'location 4', now)
             pt4.append(time_event1)
 
 
@@ -71,6 +80,7 @@ if __name__ == "__main__":
         while True:
             start_time = time.time()
             df = get_PI_press_data.pi_query_pressure()
+
             # a check to find average query times
             q_time = time.time() - start_time
             time_q.append(q_time)
@@ -90,8 +100,9 @@ if __name__ == "__main__":
                 db_fields = config_parser.db_json_parser()
                 db_manager_controller(db_fields, event_id, shield_diff, event_location, shield_loc, v_velocity)
                 pressure_event_location.shield_no_pulse.clear()
-            time.sleep(10)
+            time.sleep(299)  # wait for 299 seconds before another query
             time_q.clear()
             pt1.clear(), pt2.clear(), pt3.clear(), pt4.clear()
     except Exception as e:
-        print(e)
+        if KeyError:
+            pass
