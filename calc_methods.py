@@ -1,6 +1,7 @@
 from datetime import datetime
 import time
 import pandas as pd
+import os.path
 
 start_time = time.time()
 
@@ -10,7 +11,7 @@ def div_calc(a, b):
 
 
 def convert_time(time_str):
-    a = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
+    a = datetime.strptime(time_str, "%Y/%m/%d %H:%M:%S.%f")
     b = a.strftime("%H:%M:%S.%f")
     return b
 
@@ -45,6 +46,11 @@ def convert_to_int(*kwargs):
     return result
 
 
+def check_file_exists(files):
+    result = os.path.exists(files)
+    return result
+
+
 def check_if_empty(list_of_lists):
     return all([not elem for elem in list_of_lists])
 
@@ -60,3 +66,10 @@ def make_eventID(pt1, pt2, pt3, pt4):
     if pt2:
         p2 = ' '.join(pt2)
         return p2[2:4] + p2[5:7] + p2[8:10]
+
+
+def save_to_csv(event_data, loc, now):
+    df = pd.DataFrame([event_data])
+    df.to_csv(f'event_detect_{loc}_{now}.txt', mode="a", index=False, header=None)
+
+
