@@ -11,8 +11,8 @@ end_date = datetime.datetime.now()
 start_date = datetime.datetime.now() - datetime.timedelta(seconds=x)
 
 # for testing historical
-# start_date  = '2022-08-02'
-# end_date = '2022-08-03'
+# start_date = '2022-08-06 11:35:00'
+# end_date = '2022-08-06 13:36:00'
 
 
 conn = pyodbc.connect(
